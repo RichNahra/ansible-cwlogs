@@ -1,0 +1,113 @@
+{
+	"agent": {
+		"metrics_collection_interval": {{ metrics_collection_interval }},
+		"run_as_user": "cwagent"
+	},
+	"logs": {
+		"logs_collected": {
+			"files": {
+				"collect_list": [
+					{% for item in monitor_files %}
+					
+					{
+						"file_path": "{{ item }}",
+						"log_group_name": "{{ log_group }}",
+						"log_stream_name": "/{hostname}/{{ item.split('/') | last }}"
+					}{% if not loop.last %},{% endif %}
+					{% endfor %}
+					
+				]
+			}
+		}
+	},
+	"metrics": {
+		"namespace": "{{ log_group }}",
+		"metrics_collected": {
+			"collectd": {
+				"metrics_aggregation_interval": {{ metrics_aggregation_interval }}
+			},
+			"cpu": {
+				"measurement": [
+          				{"name": "cpu_usage_idle", "unit": "Percent"},
+          				{"name": "cpu_usage_iowait", "unit": "Percent"},
+          				{"name": "cpu_usage_user", "unit": "Percent"},
+          				{"name": "cpu_usage_system","unit": "Percent"},
+          				{"name": "cpu_usage_nice", "unit": "Percent"}
+        		],
+				"metrics_collection_interval": {{ metrics_collection_interval }},
+				"resources": [
+					"*"
+				],
+				"totalcpu": true
+			},
+			"disk": {
+				"measurement": [
+					{"name": "used_percent", "unit": "Percent"},
+          				{"name": "free" },
+          				{"name": "inodes_free"}
+				],
+				"metrics_collection_interval": {{ metrics_collection_interval }},
+				"resources": [
+					"*"
+				]
+			},
+			"diskio": {
+				"measurement": [
+					{"name": "io_time", "unit": "Milliseconds"},
+					{"name": "write_bytes", "unit": "Bytes"},
+					{"name": "read_bytes", "unit": "Bytes"},
+					{"name": "writes", "unit": "Count"},
+					{"name": "reads", "unit": "Count"}
+				],
+				"metrics_collection_interval": {{ metrics_collection_interval }},
+				"resources": [
+					"*"
+				]
+			},
+			"processes": {
+				"measurement": [
+					{"name": "total", "unit": "Count"},
+					{"name": "zombies", "unit": "Count"}
+				],
+				"metrics_collection_interval": {{ metrics_collection_interval }}
+			},
+			"mem": {
+				"measurement": [
+					"mem_used_percent",
+					"mem_available_percent"
+				],
+				"metrics_collection_interval": {{ metrics_collection_interval }}
+			},
+			"netstat": {
+				"measurement": [
+					{"name": "tcp_established", "unit": "Count"},
+					{"name": "tcp_time_wait", "unit": "Count"}
+				],
+				"metrics_collection_interval": {{ metrics_collection_interval }}
+			},
+			"net": {
+				"measurement": [
+					"bytes_sent",
+					"bytes_recv",
+					"packets_sent",
+					"packets_recv"
+				],
+				"metrics_collection_interval": {{ metrics_collection_interval }},
+				"resources": [
+					"*"
+				]
+			},
+			"statsd": {
+				"metrics_aggregation_interval": {{ metrics_aggregation_interval }},
+				"metrics_collection_interval": {{ metrics_collection_interval }},
+				"service_address": ":8125"
+			},
+			"swap": {
+				"measurement": [
+					"swap_used_percent"
+				],
+				"metrics_collection_interval": {{ metrics_collection_interval }}
+			}
+		}
+	}
+}

@@ -1,0 +1,78 @@
+---
+- name: CloudWatch Agent Installer Play
+  hosts: all
+  become: true
+  vars:
+    temp_dir: /tmp
+    region: us-east-2
+    cwagent: 
+      ubuntu: https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+      redhat: https://s3.amazonaws.com/amazoncloudwatch-agent/redhat/amd64/latest/amazon-cloudwatch-agent.rpm
+    keys: "{{ lookup('file', 'access_keys.json') | from_json }}" 
+    run_as: cwagent
+    profile_name: default
+    log_group: /onprem/integration_servers
+    metrics_aggregation_interval: 60
+    metrics_collection_interval: 30
+    monitor_files:
+      - /var/log/syslog
+      - /var/log/auth.log
+      - /var/log/amazon/amazon-cloudwatch-agent/amazon-cloudwatch-agent.log
+  handlers:
+    - name: restart_agent
+      service:
+        name: amazon-cloudwatch-agent
+        state: restarted
+  tasks:
+    # TODO add logic to verify download checksum
+    - name: download cloud watch logs agent
+      get_url:
+        url: "{{ cwagent[ansible_distribution | lower] }}"
+        dest: "{{ temp_dir }}"
+      tags: always
+
+    - name: Install OS agnostic packages
+      package: 
+        name: [collectd, unzip]
+        state: present
+
+    - name: Install cwagent ubuntu
+      apt:
+        deb: /tmp/{{ cwagent[ansible_distribution | lower].split("/") | last }}
+      when:
+        - ansible_distribution == 'Ubuntu'
+      ignore_errors: "{{ ansible_check_mode }}"
+
+    - name: set aws profile on cwagent user
+      file: 
+        path: "/home/{{run_as}}/.aws"
+        state: directory
+        recurse: yes
+        owner: cwagent
+        group: cwagent
+
+    - name: generate and push configs
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: cwagent
+        group: cwagent
+      loop:
+        - { src: credentials.j2, dest: "/home/{{run_as}}/.aws/credentials" }
+        - { src: config.j2, dest: "/home/{{run_as}}/.aws/config" }
+        - { src: agent.json.j2, dest: "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json" }
+        - { src: common-config.toml.j2, dest: "/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml" }
+        - { src: log-config.json.j2, dest: "/opt/aws/amazon-cloudwatch-agent/etc/log-config.json" }
+      notify: restart_agent
+
+    - name: add run_as user to adm group to access /var/log/*
+      user:
+        name: "{{ run_as }}"
+        groups: adm
+        append: yes
+
+    - name: enable agent
+      service:
+        name: amazon-cloudwatch-agent
+        state: started
+        enabled: yes
