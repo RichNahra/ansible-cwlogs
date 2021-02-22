@@ -4,7 +4,7 @@ This playbook installs and configures AWS CloudWatch agent on servers hosted on 
 
 > Note 1: This playbook has been tested on Ubuntu 20.04
 
-> Note 2: Metrics require `collectd` dameon which is installed by this playbook
+> Note 2: Metrics require `collectd` daemon which is installed by this playbook
 
 ## Requirements
 
