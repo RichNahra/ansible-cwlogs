@@ -48,6 +48,8 @@ IAM user with following policy attached.
 
 Next, create a file in the root directory called `access_keys.json` and add IAM users access key values
 
+> Note: `access_keys.json` is included in `.gitignore` to prevent committing credentials in git
+
 ```json
 {
     "key_id": "xxxxxxxxxxxxx",

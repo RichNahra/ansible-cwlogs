@@ -2,10 +2,12 @@ all:
   children:
     webservers:
       hosts:
-        foo.example.com:
-        bar.example.com:  
-    dbservers:
+        srv1:
+          ansible_host: 192.168.86.68
+    databases:
       hosts:
-        one.example.com:
-        two.example.com:
-        three.example.com:
+        srv2:
+          ansible_host: 192.168.86.114
+  vars:    
+    ansible_user: rich
+        

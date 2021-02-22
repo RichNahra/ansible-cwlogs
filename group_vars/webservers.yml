@@ -1,0 +1,4 @@
+monitor_files:
+    - /var/log/syslog
+    - /var/log/auth.log
+    

@@ -1,0 +1,9 @@
+---
+- name: Install CentOS Packages
+  dnf:
+    name: epel-release
+
+- name: Install cwagent centos
+  dnf:
+    name: collectd, /tmp/{{ cwagent[ansible_distribution | lower].split("/") | last }}
+  ignore_errors: "{{ ansible_check_mode }}"

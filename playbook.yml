@@ -7,17 +7,16 @@
     region: us-east-2
     cwagent: 
       ubuntu: https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
-      redhat: https://s3.amazonaws.com/amazoncloudwatch-agent/redhat/amd64/latest/amazon-cloudwatch-agent.rpm
+      centos: https://s3.amazonaws.com/amazoncloudwatch-agent/centos/amd64/latest/amazon-cloudwatch-agent.rpm
     keys: "{{ lookup('file', 'access_keys.json') | from_json }}" 
     run_as: cwagent
     profile_name: default
-    log_group: /onprem/integration_servers
+    log_group: /home/api-product
     metrics_aggregation_interval: 60
     metrics_collection_interval: 30
-    monitor_files:
-      - /var/log/syslog
-      - /var/log/auth.log
+    monitor_files_default:
       - /var/log/amazon/amazon-cloudwatch-agent/amazon-cloudwatch-agent.log
+    monitor_merged: "{{ monitor_files + monitor_files_default | unique | list }}"
   handlers:
     - name: restart_agent
       service:
@@ -29,19 +28,10 @@
       get_url:
         url: "{{ cwagent[ansible_distribution | lower] }}"
         dest: "{{ temp_dir }}"
-      tags: always
 
-    - name: Install OS agnostic packages
-      package: 
-        name: [collectd, unzip]
-        state: present
-
-    - name: Install cwagent ubuntu
-      apt:
-        deb: /tmp/{{ cwagent[ansible_distribution | lower].split("/") | last }}
-      when:
-        - ansible_distribution == 'Ubuntu'
-      ignore_errors: "{{ ansible_check_mode }}"
+    - name: Install OS specific packages
+      include_tasks: "tasks/{{ ansible_distribution | lower}}.yml"
+      tags: packages
 
     - name: set aws profile on cwagent user
       file: 
@@ -51,7 +41,7 @@
         owner: cwagent
         group: cwagent
 
-    - name: generate and push configs
+    - name: generate and push configs       
       template:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
@@ -65,14 +55,28 @@
         - { src: log-config.json.j2, dest: "/opt/aws/amazon-cloudwatch-agent/etc/log-config.json" }
       notify: restart_agent
 
-    - name: add run_as user to adm group to access /var/log/*
+    - name: Make run_as user a member of adm group
       user:
         name: "{{ run_as }}"
         groups: adm
         append: yes
 
+    - name: Make sure run_as user has permission to read files in monitor_merged
+      acl:
+        path: "{{ item }}"
+        entity: adm
+        etype: group
+        permissions: rX
+        state: present
+      loop: "{{ monitor_merged }}"
+      when: 
+        - item != '/var/log/amazon/amazon-cloudwatch-agent/amazon-cloudwatch-agent.log'
+
     - name: enable agent
       service:
-        name: amazon-cloudwatch-agent
+        name: "{{ item }}"
         state: started
         enabled: yes
+      loop:
+        - amazon-cloudwatch-agent
+        #- collectd

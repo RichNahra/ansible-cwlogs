@@ -1,0 +1,11 @@
+---
+- name: Install OS agnostic packages
+  apt: 
+    name: [collectd, unzip]
+    state: present
+
+- name: Install cwagent ubuntu
+  apt:
+    deb: /tmp/{{ cwagent[ansible_distribution | lower].split("/") | last }}
+    state: present
+  ignore_errors: "{{ ansible_check_mode }}"

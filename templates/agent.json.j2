@@ -7,12 +7,12 @@
 		"logs_collected": {
 			"files": {
 				"collect_list": [
-					{% for item in monitor_files %}
+					{% for item in monitor_merged %}
 					
 					{
 						"file_path": "{{ item }}",
 						"log_group_name": "{{ log_group }}",
-						"log_stream_name": "/{hostname}/{{ item.split('/') | last }}"
+						"log_stream_name": "{hostname}-{{ item.split('/') | last }}"
 					}{% if not loop.last %},{% endif %}
 					{% endfor %}
 					
@@ -21,7 +21,7 @@
 		}
 	},
 	"metrics": {
-		"namespace": "{{ log_group }}",
+		"namespace": "{{ log_group }}/{{ group_names[0] }}",
 		"metrics_collected": {
 			"collectd": {
 				"metrics_aggregation_interval": {{ metrics_aggregation_interval }}
